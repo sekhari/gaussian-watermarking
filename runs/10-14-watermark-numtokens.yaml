@@ -1,0 +1,54 @@
+description: watermark detection numtokens
+
+target:
+  service: sing
+  # which virtual cluster you belong to (msrlabs, etc.). Everyone has access to "msrlabs".
+  # physical cluster to use (cam, gcr, rr1, rr2) or Azure clusters (eu1, eu2, etc.)
+  name:  msroctovc # msrresrchvc #
+  
+
+environment:
+  # registry: singularitybase.azurecr.io
+  image: amlt-sing/acpt-2.4.0-py3.10-cuda12.4:20240731T103952913 # base/job/pytorch/acpt-2.2.1-py3.10-cuda12.1:20240312T225111416
+  setup:
+    - python -m pip install -r requirements.txt --user
+
+code:
+  local_dir: $CONFIG_DIR/..
+
+
+search:
+  job_template:
+    name: grid_{experiment_name:s}_{auto:3s}
+    sku: G1-A100
+    identity: managed
+    sla_tier: premium
+    command:
+    - python src/generate_text.py model.watermark_overrides={watermark_overrides} sampling.max_tokens={max_tokens} seed={seed} #model.laserize=True
+    - python src/detect_watermarks.py model.watermark_overrides={watermark_overrides} sampling.max_tokens={max_tokens} seed={seed} #model.laserize=True
+
+  type: hyperdrive
+  sampling: grid
+  max_trials: 1000
+  parallel_trials: 1000
+  params:
+
+    - name: watermark_overrides
+      spec: discrete
+      values: ['mistralai/Mistral-7B-v0.3@___@1024@___@30@@@up_proj@@@weight@___@1e-05', 'mistralai/Mistral-7B-v0.3@___@512@___@28@@@up_proj@@@weight@___@1e-05', 'mistralai/Mistral-7B-v0.3@___@512@___@30@@@gate_proj@@@weight@___@1e-05', 'meta-llama/Meta-Llama-3.1-8B@___@1024@___@31@@@up_proj@@@weight@___@3e-05', 'meta-llama/Meta-Llama-3.1-8B@___@512@___@29@@@down_proj@@@weight@___@0.0001', 'meta-llama/Meta-Llama-3.1-8B@___@1024@___@28@@@up_proj@@@weight@___@0.0003', 'microsoft/Phi-3-mini-4k-instruct@___@256@___@28@@@gate_up_proj@@@weight@___@0.001', 'microsoft/Phi-3-mini-4k-instruct@___@1024@___@31@@@gate_up_proj@@@weight@___@0.0003']
+
+    - name: max_tokens
+      spec: discrete
+      values: [20, 50, 100, 200, 300, 500, 700, 1000]
+    
+    - name: seed
+      spec: discrete
+      values: [133337,133339,133341]
+    
+   
+    
+    
+    
+    
+
+

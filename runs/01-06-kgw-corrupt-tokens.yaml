@@ -1,0 +1,64 @@
+description: KGW Generation and Detection
+
+target:
+  service: sing
+  # which virtual cluster you belong to (msrlabs, etc.). Everyone has access to "msrlabs".
+  # physical cluster to use (cam, gcr, rr1, rr2) or Azure clusters (eu1, eu2, etc.)
+  name: msroctovc # msrresrchvc #  # 
+  
+
+environment:
+  # registry: singularitybase.azurecr.io
+  image: amlt-sing/acpt-torch2.4.1-py3.10-cuda12.4-ubuntu22.04:20240918T133230473 # base/job/pytorch/acpt-2.2.1-py3.10-cuda12.1:20240312T225111416
+  setup:
+    - python -m pip install -r requirements.txt --user
+    - bash code/hf_login.sh
+
+code:
+  local_dir: $CONFIG_DIR/..
+
+
+search:
+  job_template:
+    name: grid_{experiment_name:s}_{auto:3s}
+    sku: G1-A100
+    identity: managed
+    submit_args:
+      env:
+        _AZUREML_SINGULARITY_JOB_UAI: "/subscriptions/bbd59374-b76d-4cb5-88b6-2be35debc7cf/resourcegroups/blockadam/providers/Microsoft.ManagedIdentity/userAssignedIdentities/blockadamuami" 
+    sla_tier: premium
+    command:
+    - python src/kgw_corrupt_detect.py amlt=True data.max_samples=100 seed={seed} model.name={model} other_gen.bias={bias} corruption_robust={corruption_robust} corruption_robust.tokens_to_corrupt={tokens_to_corrupt}
+
+  type: hyperdrive
+  sampling: grid
+  max_trials: 1000
+  parallel_trials: 1000
+  params:
+      
+    - name: tokens_to_corrupt
+      spec: discrete
+      values: [0.0, 0.1, 0.2, 0.5] # [0.01, 0.05, 0.1, 0.2]
+
+    - name: corruption_robust
+      spec: discrete
+      values: [add_random_tokens, substitute_random_tokens, remove_random_tokens]  
+
+    - name: seed
+      spec: discrete
+      values: [1337, 1997, 1761]
+    
+    - name: model
+      spec: discrete
+      values: ['microsoft/Phi-3-mini-4k-instruct', 'meta-llama/Meta-Llama-3.1-8B', 'mistralai/Mistral-7B-v0.3']
+    
+    - name: bias
+      spec: discrete
+      values: [1.0, 2.0]
+   
+    
+    
+    
+    
+
+

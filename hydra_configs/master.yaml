@@ -1,0 +1,43 @@
+amlt: True
+
+model:
+  name: "meta-llama/Llama-2-7b-hf"
+  seed: 1337
+
+
+tokenizer:
+  name: null # if not specified, will use the default tokenizer for the model
+
+
+device: "cuda" # cuda or cpu
+
+data:
+  type: "disk" # disk or hf
+  path: "data/prompts/mini_c4"
+
+
+
+generation:
+  max_prompts: 2 # Debugging, change for real testing
+  prefix_length_type: "max_tokens" # fraction or max_tokens
+  prefix_fracs: [0.1, 0.2, 0.3, 0.4, 0.5]
+  prefix_max_tokens: [50] #[50, 100, 150, 200, 250]
+  max_generation_length: 100
+
+
+
+
+
+
+master_parent: null
+
+
+
+output:
+  master_path: '.'
+  generated_text_path: 'data/generated_text'
+
+
+
+fs:
+  blob_root: /mnt/default

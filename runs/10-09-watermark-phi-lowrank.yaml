@@ -1,0 +1,57 @@
+description: gaussian watermarking phi
+
+target:
+  service: sing
+  # which virtual cluster you belong to (msrlabs, etc.). Everyone has access to "msrlabs".
+  # physical cluster to use (cam, gcr, rr1, rr2) or Azure clusters (eu1, eu2, etc.)
+  name:  msroctovc # msrresrchvc #
+  
+
+environment:
+  # registry: singularitybase.azurecr.io
+  image: amlt-sing/acpt-2.4.0-py3.10-cuda12.4:20240731T103952913 # base/job/pytorch/acpt-2.2.1-py3.10-cuda12.1:20240312T225111416
+  setup:
+    - python -m pip install -r requirements.txt --user
+
+code:
+  local_dir: $CONFIG_DIR/..
+
+
+search:
+  job_template:
+    name: grid_{experiment_name:s}_{auto:3s}
+    sku: G1-A100
+    identity: managed
+    sla_tier: premium
+    command:
+    - python src/generate_text.py model.name={model} model.watermark_variance={variance} model.watermark_param_names=[{layer}@@@{mlp_type}@@@weight] model.rank_to_drop={rank}
+    - python src/detect_watermarks.py model.name={model} model.watermark_variance={variance} model.watermark_param_names=[{layer}@@@{mlp_type}@@@weight] model.rank_to_drop={rank}
+    - python src/lm_eval.py model.name={model} model.watermark_variance={variance} model.watermark_param_names=[{layer}@@@{mlp_type}@@@weight] model.rank_to_drop={rank} lm_eval.gpu_memory_utilization=0.5
+    - python src/alpaca_eval.py lm_eval=alpaca model.watermark_overrides={model}@___@{rank}@___@{layer}@@@{mlp_type}@@@weight@___@{variance}
+
+  type: hyperdrive
+  sampling: grid
+  max_trials: 1000
+  parallel_trials: 1000
+  params:
+    - name: model
+      spec: discrete
+      values: ['microsoft/Phi-3-mini-4k-instruct']
+
+    - name: variance
+      spec: discrete
+      values: [1e-5, 3e-5, 1e-4, 3e-4, 1e-3]
+    
+    - name: layer
+      spec: discrete
+      values: ['31', '30', '29', '28']  #
+    
+    - name: mlp_type
+      spec: discrete
+      values: ["gate_up_proj", "down_proj"] # 
+    
+    - name: rank
+      spec: discrete
+      values: [256, 512, 1024] # [64, 128]
+
+

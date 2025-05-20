@@ -1,0 +1,58 @@
+description: corruption robust watermark detection
+
+target:
+  service: sing
+  # which virtual cluster you belong to (msrlabs, etc.). Everyone has access to "msrlabs".
+  # physical cluster to use (cam, gcr, rr1, rr2) or Azure clusters (eu1, eu2, etc.)
+  name:  msroctovc # msrresrchvc #
+  
+
+environment:
+  # registry: singularitybase.azurecr.io
+  image: amlt-sing/acpt-2.4.0-py3.10-cuda12.4:20240731T103952913 # base/job/pytorch/acpt-2.2.1-py3.10-cuda12.1:20240312T225111416 #
+  setup:
+    - python -m pip install -r requirements.txt --user
+
+code:
+  local_dir: $CONFIG_DIR/..
+
+
+search:
+  job_template:
+    name: grid_{experiment_name:s}_{auto:3s}
+    sku: G1-A100
+    identity: managed
+    sla_tier: premium
+    command:
+    - python src/generate_text.py model.watermark_overrides={watermark_overrides} corruption_robust={corruption_robust} corruption_robust.tokens_to_corrupt={tokens_to_corrupt} model.robust_block_size={robust_block_size} model.robust_num_samples={robust_num_samples}
+    - python src/corrupt_detect_watermarks.py model.watermark_overrides={watermark_overrides} corruption_robust={corruption_robust} corruption_robust.tokens_to_corrupt={tokens_to_corrupt} model.robust_block_size={robust_block_size} model.robust_num_samples={robust_num_samples}
+
+  type: hyperdrive
+  sampling: grid
+  max_trials: 1000
+  parallel_trials: 1000
+  params:
+
+    - name: watermark_overrides
+      spec: discrete
+      values:  ['microsoft/Phi-3-mini-4k-instruct@___@16@___@31@@@down_proj@@@weight@___@3e-05'] # ['mistralai/Mistral-7B-v0.3@___@4@___@30@@@up_proj@@@weight@___@1e-05']
+
+    - name: tokens_to_corrupt
+      spec: discrete
+      values: [0.01, 0.1, 0.2, 0.5] # [0.01, 0.05, 0.1, 0.2]
+
+    - name: corruption_robust
+      spec: discrete
+      values: [add_start_tokens, add_random_tokens, substitute_start_tokens, substitute_random_tokens, remove_start_tokens, remove_random_tokens]  
+    
+    - name: robust_block_size
+      spec: discrete
+      values: [0, 100, 200, 500, 700]
+    
+    - name: robust_num_samples
+      spec: discrete
+      values: [10]
+    
+    
+    
+

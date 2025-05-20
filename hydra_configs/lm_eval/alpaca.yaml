@@ -1,0 +1,29 @@
+
+
+
+evaluator: null
+max_samples: null
+model_path: null # models/microsoft-Phi-3-mini-4k-instruct_seed_133337_rank_10 # models/microsoft-Phi-3-mini-4k-instruct_seed_133337_rank_0 #
+
+unwatermarked: False
+
+
+gpu_memory_utilization: 0.9
+
+sampling:
+  top_p: 1.0
+  seed: ${seed}
+  max_tokens: 1000
+  temperature: 1.0
+  top_k: -1
+
+
+
+
+
+
+
+
+max_generations: null
+generations_parent: amlt/09-18-watermark-r0/grid_09-18-watermark-r0_lay_28_mlp_down_proj_mod_meta-llama_Meta-Llama-3.1-8B_ran_0_var_1e-3  # amlt/09-16-alpaca-generate
+outputs_parent: alpaca_win_rate

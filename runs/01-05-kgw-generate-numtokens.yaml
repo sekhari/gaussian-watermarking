@@ -1,0 +1,60 @@
+description: KGW Generation and Detection
+
+target:
+  service: sing
+  # which virtual cluster you belong to (msrlabs, etc.). Everyone has access to "msrlabs".
+  # physical cluster to use (cam, gcr, rr1, rr2) or Azure clusters (eu1, eu2, etc.)
+  name: msroctovc # msrresrchvc #  # 
+  
+
+environment:
+  # registry: singularitybase.azurecr.io
+  image: amlt-sing/acpt-torch2.4.1-py3.10-cuda12.4-ubuntu22.04:20240918T133230473 # base/job/pytorch/acpt-2.2.1-py3.10-cuda12.1:20240312T225111416
+  setup:
+    - python -m pip install -r requirements.txt --user
+    - bash code/hf_login.sh
+
+code:
+  local_dir: $CONFIG_DIR/..
+
+
+search:
+  job_template:
+    name: grid_{experiment_name:s}_{auto:3s}
+    sku: G1-A100
+    identity: managed
+    submit_args:
+      env:
+        _AZUREML_SINGULARITY_JOB_UAI: "/subscriptions/bbd59374-b76d-4cb5-88b6-2be35debc7cf/resourcegroups/blockadam/providers/Microsoft.ManagedIdentity/userAssignedIdentities/blockadamuami" 
+    sla_tier: premium
+    command:
+    - python src/kgw_generate.py amlt=True data.max_samples=100 sampling.max_tokens={max_tokens} seed={seed} model.name={model} other_gen.bias={bias}
+
+  type: hyperdrive
+  sampling: grid
+  max_trials: 1000
+  parallel_trials: 1000
+  params:
+      
+    - name: max_tokens
+      spec: discrete
+      values: [50, 200, 300, 500, 700] # [20, 100, 1000]
+    
+    - name: seed
+      spec: discrete
+      values: [1337, 1997, 1761]
+    
+    - name: model
+      spec: discrete
+      values: ['microsoft/Phi-3-mini-4k-instruct', 'meta-llama/Meta-Llama-3.1-8B', 'mistralai/Mistral-7B-v0.3']
+    
+    - name: bias
+      spec: discrete
+      values: [1.0, 2.0]
+   
+    
+    
+    
+    
+
+
